@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { analyticsService } from '../../services/api';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -27,12 +28,38 @@ ChartJS.register(
 );
 
 const MinistryIntelligence = () => {
+    const [coverage, setCoverage] = useState(null);
+    const [participation, setParticipation] = useState(null);
+    const [reliability, setReliability] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            try {
+                const [covData, partData, relData] = await Promise.all([
+                    analyticsService.getCoverage(),
+                    analyticsService.getParticipation(),
+                    analyticsService.getReliability()
+                ]);
+                setCoverage(covData);
+                setParticipation(partData);
+                setReliability(relData);
+            } catch (error) {
+                console.error("Error fetching analytics:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAnalytics();
+    }, []);
+
     const coverageData = {
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
         datasets: [
             {
                 label: 'Coverage Rate (%)',
-                data: [95, 98, 97, 99, 94, 98.5],
+                data: [95, 98, 97, 99, 94, coverage?.coverage_rate || 0],
                 borderColor: '#4a148c',
                 backgroundColor: 'rgba(74, 20, 140, 0.1)',
                 tension: 0.4,
@@ -42,11 +69,11 @@ const MinistryIntelligence = () => {
     };
 
     const sccParticipationData = {
-        labels: ['St. Jude', 'St. Monica', 'Youth', 'Legion of Mary', 'Others'],
+        labels: participation ? Object.keys(participation) : ['St. Jude', 'St. Monica', 'Youth', 'Legion of Mary', 'Others'],
         datasets: [
             {
                 label: 'Participation',
-                data: [35, 25, 20, 15, 5],
+                data: participation ? Object.values(participation) : [35, 25, 20, 15, 5],
                 backgroundColor: [
                     '#4a148c',
                     '#7c43bd',
@@ -58,6 +85,8 @@ const MinistryIntelligence = () => {
         ],
     };
 
+    if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading Intelligence...</div>;
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             {/* Top Metrics */}
@@ -67,7 +96,7 @@ const MinistryIntelligence = () => {
                         <div style={{ background: 'var(--bg-app)', padding: '0.75rem', borderRadius: '50%' }}><TrendingUp size={24} color="var(--primary)" /></div>
                         <div>
                             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>Coverage Rate</p>
-                            <h3 style={{ margin: 0 }}>98.5%</h3>
+                            <h3 style={{ margin: 0 }}>{coverage?.coverage_rate || 0}%</h3>
                         </div>
                     </div>
                 </div>
@@ -75,8 +104,8 @@ const MinistryIntelligence = () => {
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                         <div style={{ background: 'var(--bg-app)', padding: '0.75rem', borderRadius: '50%' }}><AlertCircle size={24} color="var(--warning)" /></div>
                         <div>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>Fallback Rate</p>
-                            <h3 style={{ margin: 0 }}>4.2%</h3>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>Fallbacks</p>
+                            <h3 style={{ margin: 0 }}>{coverage?.total_masses ? "Enabled" : "None"}</h3>
                         </div>
                     </div>
                 </div>
@@ -84,8 +113,8 @@ const MinistryIntelligence = () => {
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                         <div style={{ background: 'var(--bg-app)', padding: '0.75rem', borderRadius: '50%' }}><Users size={24} color="var(--success)" /></div>
                         <div>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>Active Members</p>
-                            <h3 style={{ margin: 0 }}>142</h3>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>Total Roles</p>
+                            <h3 style={{ margin: 0 }}>{coverage?.total_roles || 0}</h3>
                         </div>
                     </div>
                 </div>
@@ -94,7 +123,7 @@ const MinistryIntelligence = () => {
                         <div style={{ background: 'var(--bg-app)', padding: '0.75rem', borderRadius: '50%' }}><Award size={24} color="var(--info)" /></div>
                         <div>
                             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>Avg. Reliability</p>
-                            <h3 style={{ margin: 0 }}>92%</h3>
+                            <h3 style={{ margin: 0 }}>{reliability?.average_reliability_score || 0}%</h3>
                         </div>
                     </div>
                 </div>

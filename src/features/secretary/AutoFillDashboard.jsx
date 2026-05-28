@@ -1,20 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { rosterService } from '../../services/api';
 import { Sparkles, CheckCircle2, AlertTriangle, UserPlus, RefreshCcw, Send } from 'lucide-react';
 
 const AutoFillDashboard = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationComplete, setGenerationComplete] = useState(false);
 
-    const [fallbacks, setFallbacks] = useState([
-        { id: 1, mass: 'Sunday 9AM', originalGroup: 'St. Monica SCC', assignedProclaimer: 'James Otieno', reason: 'No certified members available in St. Monica SCC', status: 'Pending Review' }
-    ]);
+    const [fallbacks, setFallbacks] = useState([]);
+    const [previewData, setPreviewData] = useState([]);
 
-    const handleGenerate = () => {
+    const handleGenerate = async () => {
         setIsGenerating(true);
-        setTimeout(() => {
-            setIsGenerating(false);
+        try {
+            await rosterService.generate(6, 2026); // Hardcoded for June 2026
+            const data = await rosterService.getMonthly(2026, 6);
+
+            // Filter fallbacks
+            const fbs = data.filter(a => a.is_fallback).map(a => ({
+                id: a.id,
+                mass: `${new Date(a.mass.date).toLocaleDateString()} ${a.mass.time}`,
+                originalGroup: 'SCC Group', // Backend doesn't return SCC name in assignment yet
+                assignedProclaimer: a.proclaimer?.name || 'Unassigned',
+                reason: 'Auto-selected from parish pool',
+                status: a.status
+            }));
+
+            setFallbacks(fbs);
+            setPreviewData(data.slice(0, 6)); // Preview first 6
             setGenerationComplete(true);
-        }, 2500);
+        } catch (error) {
+            console.error("Error generating roster:", error);
+            alert("Failed to generate roster. Make sure the backend is running and you have masses seeded.");
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     return (
@@ -108,21 +127,21 @@ const AutoFillDashboard = () => {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                    {[1, 2, 3, 4, 5, 6].map(i => (
+                    {previewData.length > 0 ? previewData.map((item, i) => (
                         <div key={i} style={{ padding: '1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                                 <div>
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>Sunday 12 July</p>
-                                    <p style={{ fontWeight: 700, margin: 0 }}>9:00 AM Mass</p>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>{new Date(item.mass.date).toDateString()}</p>
+                                    <p style={{ fontWeight: 700, margin: 0 }}>{item.mass.time} Mass</p>
                                 </div>
-                                <span className="badge badge-info" style={{ fontSize: '0.6rem' }}>St. Monica</span>
+                                <span className="badge badge-info" style={{ fontSize: '0.6rem' }}>{item.mass.language}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--primary-light)' }}></div>
-                                <p style={{ fontWeight: 600, margin: 0, fontSize: '0.9rem' }}>Mary Akinyi</p>
+                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem' }}>👤</div>
+                                <p style={{ fontWeight: 600, margin: 0, fontSize: '0.9rem' }}>{item.proclaimer?.name || "Unassigned"}</p>
                             </div>
                         </div>
-                    ))}
+                    )) : <p style={{ color: 'var(--text-muted)' }}>No preview available. Generate the roster to see data.</p>}
                 </div>
             </div>
 

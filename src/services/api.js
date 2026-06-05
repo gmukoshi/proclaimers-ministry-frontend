@@ -74,4 +74,16 @@ export const analyticsService = {
     }
 };
 
+export const notificationService = {
+    notifyProclaimer: async (proclaimerId) => {
+        const response = await apiClient.post(`/notifications/notify/${proclaimerId}`);
+        return response.data;
+    },
+    shareRoster: async (month, year, phoneNumber = null) => {
+        const response = await apiClient.post('/notifications/share-roster', { month, year, phone_number: phoneNumber });
+        return response.data;
+    }
+};
+
 export default apiClient;
+

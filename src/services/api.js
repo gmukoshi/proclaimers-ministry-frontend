@@ -79,6 +79,10 @@ export const notificationService = {
         const response = await apiClient.post(`/notifications/notify/${proclaimerId}`);
         return response.data;
     },
+    bulkNotify: async (month, year) => {
+        const response = await apiClient.post('/notifications/bulk-notify', { month, year });
+        return response.data;
+    },
     shareRoster: async (month, year, phoneNumber = null) => {
         const response = await apiClient.post('/notifications/share-roster', { month, year, phone_number: phoneNumber });
         return response.data;
